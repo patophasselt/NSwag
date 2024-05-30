@@ -2,12 +2,14 @@
 [System.CodeDom.Compiler.GeneratedCode("NSwag", "{{ ToolchainVersion }}")]
 {{ ClientClassAccessModifier }} partial class {{ Class }} {% if HasBaseType %}: {% endif %}{% if HasBaseClass %}{{ BaseClass }}{% if GenerateClientInterfaces %}, {% endif %}{% endif %}{% if GenerateClientInterfaces %}I{{ Class }}{% endif %}
 {
+{% comment  -%}  
 {% if UseBaseUrl -%}
     #pragma warning disable 8618
     private string _baseUrl;
     #pragma warning restore 8618
 
 {% endif -%}
+{% endcomment -%}
 {% if InjectHttpClient -%}
     private {{ HttpClientType }} _httpClient;
 {% endif -%}
@@ -34,6 +36,7 @@
     public {{ Class }}({{ constructorParameters }}){% if HasConfigurationClass and HasBaseClass -%}{{ " : base(configuration)"}}{% endif %}
 #pragma warning restore CS8618 // Non-nullable field must contain a non-null value when exiting constructor. Consider declaring as nullable.
     {
+{%  comment  -%}  
 {%     if UseBaseUrl -%}
 {%         if HasBaseUrl -%}
 {%             if GenerateBaseUrlProperty -%}
@@ -62,6 +65,7 @@
 {%             endif -%}
 {%         endif -%}
 {%     endif -%}
+{% endcomment -%}
 {%     if InjectHttpClient -%}
         _httpClient = httpClient;
 {%     endif -%}
@@ -289,9 +293,7 @@
                 request_.Headers.Accept.Add(System.Net.Http.Headers.MediaTypeWithQualityHeaderValue.Parse("{{ operation.Produces }}"));
 {%     endif -%}
 
-                var urlBuilder_ = new System.Text.StringBuilder();
-                {% if UseBaseUrl %}if (!string.IsNullOrEmpty(_baseUrl)) urlBuilder_.Append(_baseUrl);{% endif %}
-                // Operation Path: "{{ operation.Path }}"
+                var pathBuilder_ = new System.Text.StringBuilder();
 {%     if operation.Path contains "{" -%}
 {%        assign pathParts = operation.Path | split: "{" -%}
 {%        for pathPart in pathParts -%}
@@ -307,7 +309,7 @@
                     {% template Client.Class.PathParameter %}
                 }
                 else
-                    if (urlBuilder_.Length > 0) urlBuilder_.Length--;
+                    if (pathBuilder_.Length > 0) pathBuilder_.Length--;
 {%                        else -%}
                 {% template Client.Class.PathParameter %}
 {%                        endif -%}
@@ -315,28 +317,28 @@
 {%                endfor -%}
 {%                comment -%} >>> just in case {% endcomment -%}
 {%                unless pathParameterFound -%}
-                urlBuilder_.Append("{{ '{' }}{{ pathParameterParts[0] }}{{ '}' }}");
+                pathBuilder_.Append("{{ '{' }}{{ pathParameterParts[0] }}{{ '}' }}");
 {%                endunless -%}
 {%                comment -%} <<< just in case {% endcomment -%}
 {%                assign nonParameterPartLengh = pathParameterParts[1] | size -%}
 {%                if nonParameterPartLengh == 1 -%}
-                urlBuilder_.Append('{{ pathParameterParts[1] }}');
+                pathBuilder_.Append('{{ pathParameterParts[1] }}');
 {%                elsif nonParameterPartLengh > 0 -%}
-                urlBuilder_.Append("{{ pathParameterParts[1] }}");
+                pathBuilder_.Append("{{ pathParameterParts[1] }}");
 {%                endif -%}
 {%            else -%}
 {%                 unless pathPart == "" -%}
-                urlBuilder_.Append("{{ pathPart }}");
+                pathBuilder_.Append("{{ pathPart }}");
 {%                 endunless -%}
 {%            endif -%}
 {%        endfor -%}
 {%    else -%}
 {%        unless operation.Path == "" -%}
-                urlBuilder_.Append("{{ operation.Path }}");
+                pathBuilder_.Append("{{ operation.Path }}");
 {%        endunless -%}
 {%    endif -%}
 {%     if operation.HasQueryParameters -%}
-                urlBuilder_.Append('?');
+                pathBuilder_.Append('?');
 {%         for parameter in operation.QueryParameters -%}
 {%             if parameter.IsOptional -%}
                 if ({{ parameter.VariableName }} != null)
@@ -347,8 +349,13 @@
                 {% template Client.Class.QueryParameter %}
 {%             endif -%}
 {%         endfor -%}
-                urlBuilder_.Length--;
+                pathBuilder_.Length--;
 {%     endif -%}
+                var urlBuilder_ = new System.Text.StringBuilder();
+{% if UseBaseUrl -%}
+                urlBuilder_.Append(!string.IsNullOrEmpty(BaseUrl) ? (pathBuilder_.ToString().StartsWith("/") ? BaseUrl.TrimEnd('/') : BaseUrl) : "");
+{% endif -%}
+                urlBuilder_.Append(pathBuilder_);
 
 {% if GeneratePrepareRequestAndProcessResponseAsAsyncMethods %}
                 await PrepareRequestAsync(client_, request_, urlBuilder_, cancellationToken).ConfigureAwait(false);
